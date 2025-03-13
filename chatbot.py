@@ -1,11 +1,13 @@
 import datetime
 import os
+import threading
 import nltk
 import random
 import csv
 import streamlit as st
 import ssl
 import json
+import pyttsx3
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 
@@ -38,6 +40,7 @@ x = vectorizer.fit_transform(patterns)
 y = tags
 clf.fit(x , y)
 
+
 # Chatbot
 
 def chatBot(input_text):
@@ -47,6 +50,16 @@ def chatBot(input_text):
         if intent['tag'] == tag:
             respose = random.choice(intent['responses'])
             return respose
+
+def speak(response):
+    engine = pyttsx3.init()
+    engine.say("Hello! I am your chatbot.")
+    engine.setProperty("rate", 150)  # Speed of speech
+    engine.setProperty("volume", 1)  # Volume (0.0 to 1.0)
+    voices = engine.getProperty('voices')
+    engine.setProperty('voice' , voices[1].id)
+    engine.say(response)
+    engine.runAndWait()        
         
 counter = 0
 
@@ -54,9 +67,34 @@ def main():
     global counter
     st.title("Welcome to the multi response chatbot")
 
+
+    st.markdown(
+    """
+    <style>
+    /* Style for text input */
+    .stTextInput>div>div>input {
+       
+        
+        background-color: #f0f8ff; /* Light blue */
+        border: 2px solid #4CAF50; /* Green border */
+        border-radius: 10px;
+        padding: 10px;
+        font-size: 20px;
+        max-height: 200px;
+        color: #333;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+    
+
     # create a sideBar menu  with optionss 
     menu = ["Home" , "Conversation History" , "About"]
     choice = st.sidebar.selectbox("Menu" , menu)
+
+   
 
     #Home Menu
     if choice == "Home":
@@ -69,7 +107,10 @@ def main():
                 csv_writer.writerow(['User Input' , 'Chatbot Response' , 'Timestamp'])
 
         counter += 1
+
         user_input = st.text_input("You: " , key=f"user_input_{counter}")
+
+
 
         if user_input:
 
@@ -77,7 +118,10 @@ def main():
             user_input_str = str(user_input)
 
             response = chatBot(user_input)
-            st.text_area("Chatbot: " , value=response , height=120, max_chars=None , key=f"chatbot_response_{counter}")
+            thread = threading.Thread(target=speak, args=(response,))
+            thread.start()
+
+            #st.text_area("Chatbot: " , value=response , height=120, max_chars=None , key=f"chatbot_response_{counter}")
 
             #get the current time Stamp
             timestamp = datetime.datetime.now().strftime(f"%Y-%m-%d %H:%M:%S")
